@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>صانع كيو آر</title>
+<meta name="description" content="حوّل اسم أي موقع أو رابطه إلى QR كود فوراً.">
+<meta name="theme-color" content="#0f6b4f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>html,body{margin:0}</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Reem+Kufi:wght@600&display=swap">
+<style>
+/* Layout: one narrow column; input and options on top, a white QR "stamp" card as the focal point, actions below. */
+:root {
+  --bg: #eef2ef;
+  --surface: #ffffff;
+  --fg: #14211c;
+  --muted: #5b6b64;
+  --line: #cfd9d3;
+  --accent: #0f6b4f;
+  --accent-fg: #ffffff;
+  --focus: #0f6b4f;
+  --font-display: "Reem Kufi", "IBM Plex Sans Arabic", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans Arabic", system-ui, "Segoe UI", Tahoma, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101a16; --surface: #18251f; --fg: #e8f0ec; --muted: #9bb0a6;
+    --line: #2c3d35; --accent: #4fd0a0; --accent-fg: #07251a; --focus: #4fd0a0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101a16; --surface: #18251f; --fg: #e8f0ec; --muted: #9bb0a6;
+  --line: #2c3d35; --accent: #4fd0a0; --accent-fg: #07251a; --focus: #4fd0a0;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+  padding-block: 28px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 460px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+h1 { font-family: var(--font-display); font-size: 2rem; line-height: 1.2; margin: 0; text-wrap: balance; }
+.sub { margin: 4px 0 0; color: var(--muted); font-size: 0.95rem; }
+label, .lbl { display: block; font-size: 0.85rem; font-weight: 600; color: var(--muted); margin-bottom: 8px; letter-spacing: 0.02em; }
+.field { display: flex; flex-direction: column; }
+input[type="text"] {
+  width: 100%; min-width: 0; font: inherit; font-size: 1.05rem; padding: 14px 16px;
+  background: var(--surface); color: var(--fg); border: 1.5px solid var(--line); border-radius: 10px;
+  direction: ltr; text-align: left;
+}
+input[type="text"]::placeholder { color: var(--muted); opacity: 0.7; }
+input:focus-visible, button:focus-visible, .sw:focus-visible, select:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.resolved { margin: 8px 0 0; font-size: 0.85rem; color: var(--muted); min-height: 1.4em; overflow-wrap: anywhere; }
+.resolved bdi { color: var(--fg); direction: ltr; unicode-bidi: isolate; }
+.row { display: flex; flex-wrap: wrap; gap: 18px; }
+.row > .field { flex: 1 1 140px; min-width: 0; }
+.swatches { display: flex; gap: 10px; }
+.sw {
+  width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--surface);
+  box-shadow: 0 0 0 1.5px var(--line); cursor: pointer; padding: 0;
+}
+.sw[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--accent); }
+select {
+  font: inherit; padding: 11px 12px; background: var(--surface); color: var(--fg);
+  border: 1.5px solid var(--line); border-radius: 10px; width: 100%;
+}
+.stamp {
+  background: #ffffff; border-radius: 14px; padding: 18px; display: grid; place-items: center;
+  border: 1.5px solid var(--line); min-height: 120px;
+}
+.stamp img { display: block; width: 100%; max-width: 320px; height: auto; image-rendering: pixelated; }
+.stamp .empty { color: #5b6b64; font-size: 0.95rem; text-align: center; margin: 24px 0; }
+.hint { text-align: center; font-size: 0.82rem; color: var(--muted); margin: -10px 0 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+button.btn {
+  flex: 1 1 140px; font: inherit; font-weight: 600; padding: 13px 16px; border-radius: 10px;
+  border: 1.5px solid var(--accent); background: var(--accent); color: var(--accent-fg); cursor: pointer;
+}
+button.btn.ghost { background: transparent; color: var(--accent); }
+button.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.status { min-height: 1.5em; text-align: center; font-size: 0.9rem; color: var(--muted); margin: -8px 0 0; }
+@media (prefers-reduced-motion: no-preference) { .btn { transition: transform .08s; } .btn:active { transform: scale(0.98); } }
+</style>
+</head>
+<body>
+<main dir="rtl" lang="ar">
+  <header>
+    <h1>صانع كيو آر</h1>
+    <p class="sub">اكتب اسم موقع أو رابطه، وسيظهر الكود فوراً.</p>
+  </header>
+
+  <div class="field">
+    <label for="site">اسم الموقع أو رابطه</label>
+    <input type="text" id="site" value="wikipedia.org" placeholder="example.com" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="url">
+    <p class="resolved" id="resolved" aria-live="polite"></p>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <span class="lbl" id="colorLbl">لون الكود</span>
+      <div class="swatches" role="group" aria-labelledby="colorLbl" id="swatches"></div>
+    </div>
+    <div class="field">
+      <label for="level">دقة التصحيح</label>
+      <select id="level">
+        <option value="L">منخفضة (كود أبسط)</option>
+        <option value="M" selected>متوسطة</option>
+        <option value="Q">عالية</option>
+        <option value="H">قصوى (كود أكثف)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="stamp" id="stamp"><p class="empty">أدخل اسم موقع لإنشاء الكود.</p></div>
+  <p class="hint" id="hint" hidden>للحفظ: اضغط على الصورة مطولاً أو انقر عليها بزر الفأرة الأيمن.</p>
+
+  <div class="actions">
+    <button class="btn" id="copyImg" type="button" disabled>نسخ الصورة</button>
+    <button class="btn ghost" id="copyUrl" type="button" disabled>نسخ الرابط</button>
+  </div>
+  <p class="status" id="status" aria-live="polite"></p>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+(function () {
+  var COLORS = [
+    { name: "أسود مخضر", v: "#14211c" },
+    { name: "أخضر", v: "#0f6b4f" },
+    { name: "أزرق", v: "#1f4e9c" },
+    { name: "بنفسجي", v: "#5b2a86" },
+    { name: "أحمر داكن", v: "#8a1f2d" }
+  ];
+  var fg = COLORS[0].v, currentUrl = "", canvas = null;
+  var $ = function (id) { return document.getElementById(id); };
+  var site = $("site"), level = $("level"), stamp = $("stamp"), resolved = $("resolved"),
+      hint = $("hint"), status = $("status"), copyImg = $("copyImg"), copyUrl = $("copyUrl");
+
+  try { if (qrcode.stringToBytesFuncs && qrcode.stringToBytesFuncs["UTF-8"]) qrcode.stringToBytes = qrcode.stringToBytesFuncs["UTF-8"]; } catch (e) {}
+
+  function normalize(raw) {
+    raw = (raw || "").trim();
+    if (!raw) return { url: "", note: "" };
+    if (/^[a-z][a-z0-9+.\-]*:\/\//i.test(raw)) return { url: raw, note: "" };
+    if (/\s/.test(raw)) return { url: raw, note: "نص عادي" };
+    var note = "";
+    if (raw.indexOf(".") === -1) { raw += ".com"; note = "أضفنا .com لأن الاسم بلا امتداد"; }
+    return { url: "https://" + raw, note: note };
+  }
+
+  function setStatus(msg) { status.textContent = msg; }
+
+  function render() {
+    var n = normalize(site.value);
+    currentUrl = n.url;
+    setStatus("");
+    if (!currentUrl) {
+      resolved.textContent = "";
+      stamp.innerHTML = '<p class="empty">أدخل اسم موقع لإنشاء الكود.</p>';
+      hint.hidden = true; copyImg.disabled = true; copyUrl.disabled = true; canvas = null;
+      return;
+    }
+    resolved.innerHTML = "سيفتح: <bdi></bdi>" + (n.note ? " (" + n.note + ")" : "");
+    resolved.querySelector("bdi").textContent = currentUrl;
+
+    var qr;
+    try {
+      qr = qrcode(0, level.value);
+      qr.addData(currentUrl);
+      qr.make();
+    } catch (e) {
+      stamp.innerHTML = '<p class="empty">النص طويل جداً. جرّب دقة تصحيح أقل أو رابطاً أقصر.</p>';
+      hint.hidden = true; copyImg.disabled = true; copyUrl.disabled = false; canvas = null;
+      return;
+    }
+    var count = qr.getModuleCount(), quiet = 4, total = count + quiet * 2;
+    var scale = Math.max(4, Math.floor(1024 / total));
+    canvas = document.createElement("canvas");
+    canvas.width = canvas.height = total * scale;
+    var ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = fg;
+    for (var r = 0; r < count; r++) {
+      for (var c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) ctx.fillRect((c + quiet) * scale, (r + quiet) * scale, scale, scale);
+      }
+    }
+    var img = new Image();
+    img.alt = "كيو آر كود للرابط " + currentUrl;
+    img.src = canvas.toDataURL("image/png");
+    stamp.innerHTML = "";
+    stamp.appendChild(img);
+    hint.hidden = false; copyImg.disabled = false; copyUrl.disabled = false;
+  }
+
+  var sw = $("swatches");
+  COLORS.forEach(function (c, i) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "sw"; b.style.background = c.v;
+    b.setAttribute("aria-label", c.name); b.setAttribute("aria-pressed", i === 0 ? "true" : "false");
+    b.addEventListener("click", function () {
+      fg = c.v;
+      Array.prototype.forEach.call(sw.children, function (x) { x.setAttribute("aria-pressed", "false"); });
+      b.setAttribute("aria-pressed", "true");
+      render();
+    });
+    sw.appendChild(b);
+  });
+
+  function fallbackCopy(text) {
+    var t = document.createElement("textarea");
+    t.value = text; t.style.position = "fixed"; t.style.opacity = "0";
+    document.body.appendChild(t); t.select();
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(t);
+    return ok;
+  }
+
+  copyUrl.addEventListener("click", function () {
+    if (!currentUrl) return;
+    var done = function () { setStatus("تم نسخ الرابط."); };
+    var fail = function () { setStatus(fallbackCopy(currentUrl) ? "تم نسخ الرابط." : "تعذّر النسخ. حدد الرابط ونسخه يدوياً."); };
+    try { navigator.clipboard.writeText(currentUrl).then(done, fail); } catch (e) { fail(); }
+  });
+
+  copyImg.addEventListener("click", function () {
+    if (!canvas) return;
+    var fail = function () { setStatus("تعذّر نسخ الصورة هنا. اضغط على الصورة مطولاً لحفظها."); };
+    try {
+      canvas.toBlob(function (blob) {
+        if (!blob) return fail();
+        try {
+          navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]).then(function () {
+            setStatus("تم نسخ الصورة.");
+          }, fail);
+        } catch (e) { fail(); }
+      }, "image/png");
+    } catch (e) { fail(); }
+  });
+
+  site.addEventListener("input", render);
+  level.addEventListener("change", render);
+  render();
+})();
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("sw.js").catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
